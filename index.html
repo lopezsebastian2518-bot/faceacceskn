@@ -61,6 +61,7 @@
   .empleado .ced{font-size:11px;color:var(--muted)}
   .empleado .cargo{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--c-pale);color:var(--c-deep);margin-top:3px}
   .empleado .del{color:var(--err);background:none;border:none;cursor:pointer;font-size:20px;padding:4px}
+  .empleado .edit{color:var(--c-mid);background:none;border:none;cursor:pointer;font-size:17px;padding:4px}
   .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.55}
   .log-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
   .log-item:last-child{border:none}
@@ -104,6 +105,31 @@
   .stat{background:linear-gradient(135deg,var(--c-deep),var(--c-mid));color:#fff;border-radius:12px;padding:14px;text-align:center}
   .stat .n{font-size:24px;font-weight:800}
   .stat .l{font-size:11px;opacity:.85;margin-top:2px}
+
+  /* ===== MODO KIOSCO (pantalla completa para tablet fija) ===== */
+  body.kiosco{padding:0;background:#0d2638;overflow:hidden}
+  body.kiosco header,
+  body.kiosco .tabs,
+  body.kiosco #tab-registro,
+  body.kiosco #tab-personas,
+  body.kiosco #tab-reportes,
+  body.kiosco #tab-admin{display:none !important}
+  body.kiosco .wrap{max-width:100%;width:100vw;height:100vh;margin:0;display:block}
+  body.kiosco #tab-asistencia{height:100vh}
+  body.kiosco #tab-asistencia .card{
+    height:100vh;margin:0;border:none;border-radius:0;background:#0d2638;
+    display:flex;flex-direction:column;padding:18px;gap:12px;
+  }
+  body.kiosco .modo-track{flex:none;max-width:560px;width:100%;align-self:center}
+  body.kiosco .video-box{flex:1;aspect-ratio:auto;min-height:0;max-width:900px;width:100%;align-self:center}
+  body.kiosco #status-a{flex:none;font-size:18px;padding:16px;max-width:560px;width:100%;align-self:center}
+  body.kiosco #reto-box{flex:none;max-width:560px;width:100%;align-self:center}
+  body.kiosco #btn-cam-a,body.kiosco #btn-kiosco{display:none !important}
+  body.kiosco #btn-salir-kiosco{
+    display:grid;place-items:center;position:fixed;top:14px;right:14px;z-index:60;
+    width:48px;height:48px;border-radius:12px;border:none;cursor:pointer;
+    background:rgba(255,255,255,.15);color:#fff;font-size:22px;backdrop-filter:blur(4px);
+  }
 
   /* ===== Layout PC (estilo panel de gestión con sidebar) ===== */
   @media (min-width:900px){
@@ -185,9 +211,15 @@
         <canvas id="cv-a"></canvas>
       </div>
       <div id="status-a" class="status">Iniciando…</div>
-      <button id="btn-cam-a" class="btn ghost">Encender cámara</button>
+      <div style="display:flex;gap:8px">
+        <button id="btn-cam-a" class="btn ghost" style="flex:1">Encender cámara</button>
+        <button id="btn-kiosco" class="btn ghost" style="flex:none;width:auto" title="Pantalla completa">⛶ Pantalla completa</button>
+      </div>
     </div>
   </section>
+
+  <!-- Botón flotante para salir del modo kiosco -->
+  <button id="btn-salir-kiosco" class="hidden" title="Salir de pantalla completa">⤢</button>
 
   <!-- REGISTRO -->
   <section id="tab-registro" class="hidden">
@@ -295,6 +327,39 @@
     </div>
   </section>
 
+  <!-- MODAL editar persona -->
+  <div id="modal-editar" class="modal-overlay hidden">
+    <div class="card" style="max-width:420px;width:100%;margin:0">
+      <label style="font-size:15px;color:var(--text)">Editar persona</label>
+      <p class="hint" style="text-align:left" id="ed-info">—</p>
+      <label>Nombre completo</label>
+      <input id="ed-nombre" placeholder="Nombre">
+      <label>Cargo</label>
+      <select id="ed-cargo" style="margin-bottom:12px">
+        <option value="Auxiliar de bodega">Auxiliar de bodega</option>
+        <option value="Montacarguista">Montacarguista</option>
+        <option value="Supervisor">Supervisor</option>
+      </select>
+      <div id="ed-recap-box" class="hidden" style="margin-bottom:12px">
+        <div class="video-box" style="aspect-ratio:4/3">
+          <video id="ed-video" autoplay muted playsinline></video>
+          <canvas id="ed-canvas"></canvas>
+        </div>
+        <div class="steps">
+          <div class="step" id="ed-step-0">1. Frente</div>
+          <div class="step" id="ed-step-1">2. Izquierda</div>
+          <div class="step" id="ed-step-2">3. Derecha</div>
+        </div>
+        <div id="ed-status" class="status">Mira al frente…</div>
+      </div>
+      <button id="ed-recapturar" class="btn ghost" style="margin-bottom:10px">↻ Re-capturar rostro</button>
+      <div style="display:flex;gap:8px">
+        <button id="ed-guardar" class="btn" style="flex:1">Guardar cambios</button>
+        <button id="ed-cancelar" class="btn ghost" style="flex:1">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL completar faltante -->
   <div id="modal-completar" class="modal-overlay hidden">
     <div class="card" style="max-width:420px;width:100%;margin:0">
@@ -366,7 +431,7 @@
 // ║  Apps Script > Implementar > Administrar implementaciones > copia   ║
 // ║  la URL y reemplaza SOLO el texto entre las comillas de abajo.      ║
 // ╚══════════════════════════════════════════════════════════════════╝
-const URL_FIJA = 'https://script.google.com/macros/s/AKfycbxx28hqFJKwz3L9arol0_jZhsTBzaBQq_HNVs9UQjbcaVHtA9PQnxPaWvzgF-_AxN2o/exec';
+const URL_FIJA = 'https://script.google.com/macros/s/AKfycbyWHM5edudbWF6N35JEromcGQhxDgOTzvxy1on31FpPZmc5_dz85rNOSzauMfm-yjvT/exec';
 const CFG = {
   url: URL_FIJA,
   thresh: parseFloat(localStorage.getItem('ca_thresh')) || 0.55,
@@ -602,7 +667,8 @@ function renderEmpleados(){
         <div class="ced">${e.cedula} · ${e.descriptores.length} áng.</div>
         ${e.cargo?`<span class="cargo">${e.cargo}</span>`:''}
       </div>
-      <button class="del" onclick="eliminarEmp('${e.cedula}')">&times;</button>
+      <button class="edit" title="Editar" onclick="abrirEditar('${e.cedula}')">✎</button>
+      <button class="del" title="Eliminar" onclick="eliminarEmp('${e.cedula}')">&times;</button>
     </div>`).join('');
 }
 async function eliminarEmp(ced){
@@ -610,14 +676,100 @@ async function eliminarEmp(ced){
   await postAS({action:'eliminar',cedula:ced});
   await cargarEmpleados();
 }
+
+/* ===== Editar persona ===== */
+let edEmp=null, edStreamRecap=null, edDescriptores=null, edFoto=null;
+function abrirEditar(ced){
+  const e=empleados.find(x=>x.cedula===ced); if(!e) return;
+  edEmp=e; edDescriptores=null; edFoto=null;
+  document.getElementById('ed-info').textContent='Cédula '+e.cedula+' · '+e.descriptores.length+' ángulos actuales';
+  document.getElementById('ed-nombre').value=e.nombre;
+  document.getElementById('ed-cargo').value=e.cargo||'Auxiliar de bodega';
+  document.getElementById('ed-recap-box').classList.add('hidden');
+  document.getElementById('ed-recapturar').textContent='↻ Re-capturar rostro';
+  document.getElementById('modal-editar').classList.remove('hidden');
+}
+document.getElementById('ed-cancelar').onclick=()=>{
+  if(edStreamRecap){ edStreamRecap.getTracks().forEach(t=>t.stop()); edStreamRecap=null; }
+  document.getElementById('modal-editar').classList.add('hidden');
+};
+document.getElementById('ed-recapturar').onclick=async()=>{
+  const box=document.getElementById('ed-recap-box');
+  if(!box.classList.contains('hidden')){
+    // cancelar recaptura
+    if(edStreamRecap){ edStreamRecap.getTracks().forEach(t=>t.stop()); edStreamRecap=null; }
+    box.classList.add('hidden');
+    document.getElementById('ed-recapturar').textContent='↻ Re-capturar rostro';
+    return;
+  }
+  try{
+    await loadModels();
+    box.classList.remove('hidden');
+    document.getElementById('ed-recapturar').textContent='✕ Cancelar re-captura';
+    const v=document.getElementById('ed-video');
+    edStreamRecap=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640}},audio:false});
+    v.srcObject=edStreamRecap; await v.play();
+    recapStep(0);
+  }catch(e){ document.getElementById('ed-status').textContent='No se pudo acceder a la cámara'; }
+};
+function recapStep(step){
+  const v=document.getElementById('ed-video'), cv=document.getElementById('ed-canvas');
+  const pose=POSES[step];
+  for(let i=0;i<POSES.length;i++) document.getElementById('ed-step-'+i).className='step'+(i<step?' done':(i===step?' active':''));
+  if(step===0) edDescriptores=[];
+  const instr={frente:'Mira al FRENTE',izquierda:'Gira a tu IZQUIERDA',derecha:'Gira a tu DERECHA'};
+  document.getElementById('ed-status').textContent=instr[pose]+' y mantén…';
+  let hold=0;
+  const iv=setInterval(async()=>{
+    if(!edStreamRecap){ clearInterval(iv); return; }
+    cv.width=v.videoWidth; cv.height=v.videoHeight;
+    const det=await faceapi.detectSingleFace(v,new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks().withFaceDescriptor();
+    const ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+    if(!det){ hold=0; document.getElementById('ed-status').textContent='No se detecta rostro'; return; }
+    const b=det.detection.box;
+    ctx.strokeStyle='#4d82bc'; ctx.lineWidth=3; ctx.strokeRect(b.x,b.y,b.width,b.height);
+    if(poseHorizontal(det.landmarks)===pose){
+      hold++; document.getElementById('ed-status').textContent=instr[pose]+' ✓ ('+hold+'/2)';
+      if(pose==='frente' && !edFoto) edFoto=capturarMiniatura(v,b);
+      if(hold>=2){
+        clearInterval(iv);
+        edDescriptores.push(Array.from(det.descriptor));
+        document.getElementById('ed-step-'+step).className='step done';
+        if(step+1<POSES.length) recapStep(step+1);
+        else {
+          document.getElementById('ed-status').textContent='✓ Rostro re-capturado ('+edDescriptores.length+' áng.)';
+          if(edStreamRecap){ edStreamRecap.getTracks().forEach(t=>t.stop()); edStreamRecap=null; }
+        }
+      }
+    } else { hold=0; }
+  },500);
+}
+document.getElementById('ed-guardar').onclick=async()=>{
+  if(!edEmp) return;
+  const nombre=document.getElementById('ed-nombre').value.trim();
+  const cargo=document.getElementById('ed-cargo').value;
+  if(!nombre){ alert('El nombre no puede quedar vacío'); return; }
+  const payload={action:'registrar',cedula:edEmp.cedula,nombre,cargo};
+  // si re-capturó, enviar nuevos descriptores y foto; si no, conservar los actuales
+  if(edDescriptores && edDescriptores.length){ payload.descriptores=edDescriptores; if(edFoto) payload.foto=edFoto; }
+  else { payload.descriptores=edEmp.descriptores.map(d=>Array.from(d)); }
+  try{
+    const res=await postAS(payload);
+    if(res.error){ alert(res.error); return; }
+    if(edStreamRecap){ edStreamRecap.getTracks().forEach(t=>t.stop()); edStreamRecap=null; }
+    document.getElementById('modal-editar').classList.add('hidden');
+    await cargarEmpleados();
+  }catch(e){ alert('Error al guardar los cambios'); }
+};
 async function postAS(payload){
   const r=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
   return r.json();
 }
 
 /* ===== ASISTENCIA ===== */
-document.getElementById('btn-cam-a').onclick=async()=>{
-  if(!CFG.url){setStatus('a','Configura la URL en Admin','err');return;}
+async function encenderCamaraAsistencia(){
+  if(!CFG.url){setStatus('a','Configura la URL en Admin','err');return false;}
   try{
     setStatus('a','Cargando modelos…','warn');
     await loadModels();
@@ -627,8 +779,35 @@ document.getElementById('btn-cam-a').onclick=async()=>{
     setStatus('a','Mira a la cámara','warn');
     startLoopA();
     document.getElementById('btn-cam-a').textContent='Cámara activa';
-  }catch(e){setStatus('a','No se pudo acceder a la cámara','err');}
-};
+    return true;
+  }catch(e){setStatus('a','No se pudo acceder a la cámara','err'); return false;}
+}
+document.getElementById('btn-cam-a').onclick=encenderCamaraAsistencia;
+
+/* ===== Modo kiosco (pantalla completa para tablet) ===== */
+async function entrarKiosco(){
+  // asegurar que estamos en la pestaña asistencia
+  document.querySelector('.tab[data-tab="asistencia"]').click();
+  document.body.classList.add('kiosco');
+  document.getElementById('btn-salir-kiosco').classList.remove('hidden');
+  // pantalla completa real del navegador (si el dispositivo lo permite)
+  try{ if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); }catch(e){}
+  // encender cámara y reconocer automáticamente si no está activa
+  if(!streamA || !streamA.active){ await encenderCamaraAsistencia(); }
+  else { startLoopA(); }
+}
+function salirKiosco(){
+  document.body.classList.remove('kiosco');
+  document.getElementById('btn-salir-kiosco').classList.add('hidden');
+  try{ if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); }catch(e){}
+}
+document.getElementById('btn-kiosco').onclick=entrarKiosco;
+document.getElementById('btn-salir-kiosco').onclick=salirKiosco;
+// si el usuario sale de fullscreen con ESC, salir del modo kiosco también
+document.addEventListener('fullscreenchange',()=>{
+  if(!document.fullscreenElement && document.body.classList.contains('kiosco')) salirKiosco();
+});
+
 let escaneando=false;       // evita solapamiento de detecciones
 let lecturas=[];            // promedia descriptores para estabilidad
 function startLoopA(){
