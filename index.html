@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Face Access KN</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --c-deep:#005187;      /* azul profundo (primario) */
+    --c-mid:#4d82bc;       /* azul medio */
+    --c-sky:#84b6f4;       /* azul cielo */
+    --c-pale:#c4dafa;      /* azul pálido */
+    --c-white:#fcffff;     /* casi blanco */
+    --bg:#eef4fc;
+    --card:#fcffff;
+    --text:#0d2638;
+    --muted:#5f7892;
+    --line:#d6e4f7;
+    --ok:#1f8a5b;--warn:#c98a00;--err:#c0392b;
+    --shadow:0 4px 18px rgba(0,81,135,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:16px}
+  .wrap{max-width:540px;margin:0 auto}
+  header{display:flex;align-items:center;gap:12px;padding:16px 4px;margin-bottom:6px}
+  .logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,var(--c-deep),var(--c-mid));display:grid;place-items:center;font-weight:800;font-size:18px;letter-spacing:-1px;flex-shrink:0;color:#fff;box-shadow:var(--shadow)}
+  header h1{font-size:18px;font-weight:800;line-height:1.15;letter-spacing:-.3px}
+  header p{font-size:12px;color:var(--muted)}
+  .role-pill{margin-left:auto;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;background:var(--c-pale);color:var(--c-deep)}
+  .role-pill.admin{background:var(--c-deep);color:#fff}
+  .tabs{display:flex;gap:5px;background:var(--c-white);padding:6px;border-radius:14px;margin-bottom:14px;box-shadow:var(--shadow);overflow-x:auto}
+  .tab{flex:1;min-width:max-content;text-align:center;padding:10px 12px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);border:none;background:none;transition:.15s;white-space:nowrap}
+  .tab.active{background:var(--c-deep);color:#fff}
+  .tab.hidden{display:none}
+  .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid var(--line);box-shadow:var(--shadow)}
+  .video-box{position:relative;width:100%;aspect-ratio:4/3;background:#0d2638;border-radius:14px;overflow:hidden;margin-bottom:12px}
+  video,canvas{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+  canvas{pointer-events:none}
+  .status{text-align:center;font-size:14px;font-weight:700;padding:11px;border-radius:10px;background:var(--c-pale);color:var(--c-deep);margin-bottom:12px}
+  .status.ok{background:rgba(31,138,91,.14);color:var(--ok)}
+  .status.warn{background:rgba(201,138,0,.14);color:var(--warn)}
+  .status.err{background:rgba(192,57,43,.12);color:var(--err)}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
+  input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:14px;margin-bottom:12px}
+  input:focus,select:focus{outline:none;border-color:var(--c-mid);box-shadow:0 0 0 3px var(--c-pale)}
+  button.btn{width:100%;padding:11px;border-radius:10px;border:none;background:var(--c-deep);color:#fff;font-size:13px;font-weight:800;cursor:pointer;transition:.15s}
+  button.btn:hover{background:#01446f}
+  button.btn:active{transform:scale(.98)}
+  button.btn:disabled{opacity:.45;cursor:not-allowed}
+  button.btn.ghost{background:var(--c-pale);color:var(--c-deep)}
+  button.btn.ghost:hover{background:var(--c-sky)}
+  button.btn.danger{background:var(--err)}
+  .empleado{display:flex;align-items:center;gap:12px;padding:11px;background:var(--bg);border-radius:12px;margin-bottom:8px}
+  /* avatar bonito: anillo degradado */
+  .av{width:52px;height:52px;border-radius:50%;flex-shrink:0;padding:2.5px;background:linear-gradient(135deg,var(--c-deep),var(--c-sky));display:grid;place-items:center}
+  .av .inner{width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--c-mid);display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px;border:2px solid var(--c-white)}
+  .av .inner img{width:100%;height:100%;object-fit:cover}
+  .empleado .info{flex:1;min-width:0}
+  .empleado .nom{font-size:14px;font-weight:700}
+  .empleado .ced{font-size:11px;color:var(--muted)}
+  .empleado .cargo{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--c-pale);color:var(--c-deep);margin-top:3px}
+  .empleado .del{color:var(--err);background:none;border:none;cursor:pointer;font-size:20px;padding:4px}
+  .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.55}
+  .log-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .log-item:last-child{border:none}
+  .log-item .l-nom{font-weight:600}
+  .log-item .l-fecha{font-size:11px;color:var(--muted)}
+  .badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:7px}
+  .badge.in{background:rgba(31,138,91,.16);color:var(--ok)}
+  .badge.out{background:rgba(201,138,0,.16);color:var(--warn)}
+  .loading{display:flex;align-items:center;justify-content:center;gap:8px;padding:20px;color:var(--muted)}
+  .spin{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--c-mid);border-radius:50%;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .hidden{display:none}
+  .steps{display:flex;gap:8px;margin-bottom:12px}
+  .step{flex:1;text-align:center;padding:9px 2px;border-radius:8px;background:var(--bg);font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line)}
+  .step.done{background:rgba(31,138,91,.14);color:var(--ok);border-color:transparent}
+  .step.active{background:var(--c-deep);color:#fff;border-color:transparent}
+  /* reto liveness */
+  .reto{text-align:center;padding:14px;border-radius:12px;background:var(--c-deep);color:#fff;margin-bottom:12px;font-weight:800;font-size:16px;letter-spacing:.3px}
+  .reto small{display:block;font-weight:600;font-size:11px;opacity:.8;margin-top:3px}
+  .reto-dots{display:flex;gap:6px;justify-content:center;margin-top:8px}
+  .reto-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3)}
+  .reto-dots i.on{background:var(--c-sky)}
+  /* switch entrada/salida */
+  .modo-track{position:relative;display:flex;background:var(--bg);border:1px solid var(--line);border-radius:13px;padding:5px;cursor:pointer;user-select:none;height:56px;margin-bottom:12px}
+  .modo-opt{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font-size:15px;font-weight:800;z-index:2;color:var(--muted);transition:color .2s}
+  .modo-opt .dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+  .modo-thumb{position:absolute;top:5px;left:5px;width:calc(50% - 5px);height:calc(100% - 10px);border-radius:9px;background:var(--ok);transition:transform .25s cubic-bezier(.4,0,.2,1),background .25s;z-index:1;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  .modo-track.salida .modo-thumb{transform:translateX(100%);background:var(--warn)}
+  .modo-track.entrada .modo-opt.in{color:#fff}
+  .modo-track.salida .modo-opt.out{color:#fff}
+  .row-toggle{display:flex;align-items:center;justify-content:space-between;padding:7px 0}
+  .switch{position:relative;width:48px;height:27px;flex-shrink:0;cursor:pointer}
+  .switch input{display:none}
+  .slider{position:absolute;inset:0;background:var(--line);border-radius:20px;transition:.2s}
+  .slider:before{content:"";position:absolute;width:19px;height:19px;left:4px;top:4px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .switch input:checked + .slider{background:var(--c-deep)}
+  .switch input:checked + .slider:before{transform:translateX(21px)}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .stat{background:linear-gradient(135deg,var(--c-deep),var(--c-mid));color:#fff;border-radius:12px;padding:14px;text-align:center}
+  .stat .n{font-size:24px;font-weight:800}
+  .stat .l{font-size:11px;opacity:.85;margin-top:2px}
+  .filtros{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .filtros .full{grid-column:1/-1}
+  .filtros input,.filtros select{margin-bottom:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">KN</div>
+    <div>
+      <h1>Face Access KN</h1>
+      <p>Reconocimiento facial &middot; Entrada y salida</p>
+    </div>
+    <span id="role-pill" class="role-pill">Acceso</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="asistencia">Asistencia</button>
+    <button class="tab tab-admin hidden" data-tab="registro">Registrar</button>
+    <button class="tab tab-admin hidden" data-tab="personas">Personas</button>
+    <button class="tab tab-admin hidden" data-tab="reportes">Reportes</button>
+    <button class="tab" data-tab="admin">Admin</button>
+  </div>
+
+  <!-- ASISTENCIA -->
+  <section id="tab-asistencia">
+    <div class="card">
+      <div class="modo-track entrada" id="modo-track">
+        <div class="modo-opt in"><span class="dot"></span>ENTRADA</div>
+        <div class="modo-opt out"><span class="dot"></span>SALIDA</div>
+        <div class="modo-thumb"></div>
+      </div>
+      <div id="reto-box" class="reto hidden">
+        <span id="reto-text">—</span>
+        <small id="reto-sub">Sigue las indicaciones para confirmar</small>
+        <div class="reto-dots" id="reto-dots"></div>
+      </div>
+      <div class="video-box">
+        <video id="vid-a" autoplay muted playsinline></video>
+        <canvas id="cv-a"></canvas>
+      </div>
+      <div id="status-a" class="status">Iniciando…</div>
+      <button id="btn-cam-a" class="btn ghost">Encender cámara</button>
+    </div>
+  </section>
+
+  <!-- REGISTRO -->
+  <section id="tab-registro" class="hidden">
+    <div class="card">
+      <div class="video-box">
+        <video id="vid-r" autoplay muted playsinline></video>
+        <canvas id="cv-r"></canvas>
+      </div>
+      <div class="steps">
+        <div class="step" id="step-0">1. Frente</div>
+        <div class="step" id="step-1">2. Izquierda</div>
+        <div class="step" id="step-2">3. Derecha</div>
+      </div>
+      <div id="status-r" class="status">Cámara apagada</div>
+      <button id="btn-cam-r" class="btn ghost" style="margin-bottom:12px">Encender cámara</button>
+      <label>Nombre completo</label>
+      <input id="reg-nom" placeholder="Ej: Sebastián Pérez">
+      <label>Cédula / ID</label>
+      <input id="reg-ced" placeholder="Ej: 1012345678" inputmode="numeric">
+      <label>Cargo</label>
+      <select id="reg-cargo">
+        <option value="Auxiliar de bodega">Auxiliar de bodega</option>
+        <option value="Montacarguista">Montacarguista</option>
+        <option value="Supervisor">Supervisor</option>
+      </select>
+      <button id="btn-capturar" class="btn" disabled>Iniciar captura multi-ángulo</button>
+      <p class="hint">Te guiará por 3 ángulos (frente, izquierda y derecha). Se guarda una miniatura de referencia.</p>
+    </div>
+  </section>
+
+  <!-- PERSONAS -->
+  <section id="tab-personas" class="hidden">
+    <div class="card">
+      <label>Buscar personas</label>
+      <input id="p-buscar" placeholder="Nombre o cédula…">
+      <select id="p-cargo" style="margin-bottom:14px">
+        <option value="">Todos los cargos</option>
+        <option value="Auxiliar de bodega">Auxiliar de bodega</option>
+        <option value="Montacarguista">Montacarguista</option>
+        <option value="Supervisor">Supervisor</option>
+      </select>
+      <label>Personas registradas (<span id="emp-count">0</span>)</label>
+      <div id="lista-emp"><div class="loading"><span class="spin"></span>Cargando…</div></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="btn-refresh-emp" class="btn ghost" style="flex:1">Actualizar lista</button>
+        <button id="btn-export-emp" class="btn ghost" style="flex:1">⬇ Descargar maestra</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORTES -->
+  <section id="tab-reportes" class="hidden">
+    <div class="card">
+      <div class="stat-grid">
+        <div class="stat"><div class="n" id="st-personas">0</div><div class="l">Personas</div></div>
+        <div class="stat"><div class="n" id="st-marcas">0</div><div class="l">Marcas filtradas</div></div>
+      </div>
+      <label>Filtros</label>
+      <div class="filtros">
+        <div>
+          <label style="font-size:11px">Desde</label>
+          <input id="f-desde" type="date">
+        </div>
+        <div>
+          <label style="font-size:11px">Hasta</label>
+          <input id="f-hasta" type="date">
+        </div>
+        <div>
+          <label style="font-size:11px">Cédula</label>
+          <input id="f-cedula" placeholder="Todas" inputmode="numeric">
+        </div>
+        <div>
+          <label style="font-size:11px">Nombre</label>
+          <input id="f-nombre" placeholder="Todos">
+        </div>
+        <div class="full">
+          <label style="font-size:11px">Cargo</label>
+          <select id="f-cargo">
+            <option value="">Todos los cargos</option>
+            <option value="Auxiliar de bodega">Auxiliar de bodega</option>
+            <option value="Montacarguista">Montacarguista</option>
+            <option value="Supervisor">Supervisor</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin:12px 0">
+        <button id="btn-filtrar" class="btn" style="flex:1">Aplicar filtros</button>
+        <button id="btn-hoy" class="btn ghost" style="flex:1">Hoy</button>
+      </div>
+      <button id="btn-export" class="btn ghost" style="margin-bottom:12px">⬇ Descargar Excel (.xlsx)</button>
+      <div id="log-reportes"><div class="loading"><span class="spin"></span>Cargando…</div></div>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="tab-admin" class="hidden">
+    <div class="card" id="login-card">
+      <label>PIN de administrador</label>
+      <input id="admin-pin" type="password" inputmode="numeric" placeholder="••••" maxlength="8">
+      <button id="btn-login" class="btn">Ingresar como administrador</button>
+      <p class="hint">PIN por defecto: 1234. Cámbialo tras ingresar.</p>
+    </div>
+    <div id="admin-panel" class="hidden">
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Verificación anti-foto</div>
+        <div class="hint" style="text-align:left;margin-bottom:10px">Elige qué retos exigir antes de marcar. Si no marcas ninguno, la verificación queda desactivada.</div>
+        <div class="row-toggle">
+          <div style="font-size:13px;font-weight:600">Girar la cabeza</div>
+          <label class="switch"><input type="checkbox" id="tg-girar"><span class="slider"></span></label>
+        </div>
+        <div class="row-toggle">
+          <div style="font-size:13px;font-weight:600">Parpadear</div>
+          <label class="switch"><input type="checkbox" id="tg-parpadear"><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row-toggle">
+          <div><div style="font-size:14px;font-weight:700">Guardar miniatura</div>
+          <div class="hint" style="text-align:left;margin-top:2px">Foto de referencia al registrar.</div></div>
+          <label class="switch"><input type="checkbox" id="tg-foto" checked><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="card">
+        <label>Sensibilidad de reconocimiento</label>
+        <input id="cfg-thresh" type="number" step="0.05" min="0.3" max="0.8" value="0.5">
+        <button id="btn-guardar-cfg" class="btn">Guardar configuración</button>
+      </div>
+      <div class="card">
+        <label>Cambiar PIN</label>
+        <input id="nuevo-pin" type="password" inputmode="numeric" placeholder="Nuevo PIN" maxlength="8">
+        <button id="btn-cambiar-pin" class="btn ghost">Actualizar PIN</button>
+      </div>
+      <button id="btn-logout" class="btn danger">Salir de modo admin</button>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
+<script>
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  PEGA AQUÍ LA URL DE TU IMPLEMENTACIÓN (termina en /exec).          ║
+// ║  Apps Script > Implementar > Administrar implementaciones > copia   ║
+// ║  la URL y reemplaza SOLO el texto entre las comillas de abajo.      ║
+// ╚══════════════════════════════════════════════════════════════════╝
+const URL_FIJA = 'https://script.google.com/macros/s/AKfycbw5doFmEQQP28tqxOwZ_LauVxvB-OsTtEZsLUA2XAXQ7UJ89wF_PJU-pt68ZX96YWO-/exec';
+const CFG = {
+  url: URL_FIJA,
+  thresh: parseFloat(localStorage.getItem('ca_thresh')) || 0.55,
+  retoGirar: localStorage.getItem('ca_girar')==='1',
+  retoParpadear: localStorage.getItem('ca_parpadear')==='1',
+  foto: localStorage.getItem('ca_foto')!=='0',
+  modelUrl: 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/'
+};
+let claveAdmin = '1234'; // se sincroniza desde el backend (hoja Config)
+function livenessActivo(){ return CFG.retoGirar || CFG.retoParpadear; }
+let modelsLoaded=false, empleados=[], faceMatcher=null;
+let streamA=null, streamR=null, loopA=null;
+let lastMark={}, isAdmin=false, registrosCache=[];
+
+const POSES=['frente','izquierda','derecha'];
+let capturing=false, capStep=0, capDescriptors=[], capFoto=null;
+
+let modoActual = localStorage.getItem('ca_modo') || 'ENTRADA';
+function aplicarModo(){
+  const tr=document.getElementById('modo-track');
+  tr.classList.toggle('salida', modoActual==='SALIDA');
+  tr.classList.toggle('entrada', modoActual!=='SALIDA');
+}
+document.getElementById('modo-track').onclick=()=>{
+  modoActual = (modoActual==='ENTRADA') ? 'SALIDA' : 'ENTRADA';
+  localStorage.setItem('ca_modo', modoActual);
+  aplicarModo(); lastMark={};
+};
+aplicarModo();
+
+/* ===== Liveness adaptativo + reto aleatorio ===== */
+// Calibración: medimos EAR base con ojos abiertos y detectamos caída relativa.
+const RetoLive = {
+  active:false, secuencia:[], idx:0,
+  earBase:null, earSamples:[], calibrando:true,
+  yawBase:null,
+  reset(){
+    this.secuencia = this._generar();
+    this.idx=0; this.earBase=null; this.earSamples=[]; this.calibrando=true; this.yawBase=null;
+    this.active=true; this._render();
+  },
+  _generar(){
+    // construye retos según lo que el admin activó
+    let pool=[];
+    if(CFG.retoParpadear) pool.push('parpadea');
+    if(CFG.retoGirar) pool.push(Math.random()<0.5?'izquierda':'derecha');
+    // si ambos activos, mezcla el orden; si solo uno, queda ese
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    if(!pool.length) pool=['parpadea']; // fallback
+    return pool;
+  },
+  _render(){
+    const box=document.getElementById('reto-box');
+    box.classList.remove('hidden');
+    const txt={parpadea:'PARPADEA',izquierda:'GIRA A TU IZQUIERDA',derecha:'GIRA A TU DERECHA'};
+    const cur=this.secuencia[this.idx];
+    document.getElementById('reto-text').textContent = this.calibrando ? 'Mantén los ojos abiertos…' : (txt[cur]||'');
+    document.getElementById('reto-sub').textContent = this.calibrando ? 'Calibrando…' : 'Reto '+(this.idx+1)+' de '+this.secuencia.length;
+    const dots=document.getElementById('reto-dots');
+    dots.innerHTML=this.secuencia.map((_,i)=>`<i class="${i<this.idx?'on':''}"></i>`).join('');
+  },
+  hide(){ document.getElementById('reto-box').classList.add('hidden'); this.active=false; },
+  // procesa cada frame; devuelve true si el reto completo se cumplió
+  process(landmarks){
+    const e=avgEAR(landmarks);
+    const yaw=yawRatio(landmarks);
+    // fase de calibración: ~10 muestras de ojo abierto
+    if(this.calibrando){
+      this.earSamples.push(e);
+      if(this.earSamples.length>=8){
+        this.earBase = this.earSamples.reduce((a,b)=>a+b,0)/this.earSamples.length;
+        this.yawBase = yaw;
+        this.calibrando=false; this._render();
+      }
+      return false;
+    }
+    const cur=this.secuencia[this.idx];
+    let ok=false;
+    if(cur==='parpadea'){
+      // caída relativa del 22% respecto a TU base = parpadeo (muy sensible)
+      if(e < this.earBase*0.78){ ok=true; }
+    } else if(cur==='izquierda'){
+      if(yaw - this.yawBase > 0.10) ok=true;
+    } else if(cur==='derecha'){
+      if(yaw - this.yawBase < -0.10) ok=true;
+    }
+    if(ok){
+      this.idx++;
+      if(this.idx>=this.secuencia.length){ return true; } // completado
+      this._render();
+    }
+    return false;
+  }
+};
+
+/* ===== Tabs ===== */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    ['asistencia','registro','personas','reportes','admin'].forEach(n=>{
+      document.getElementById('tab-'+n).classList.toggle('hidden', n!==t.dataset.tab);
+    });
+    if(t.dataset.tab!=='asistencia'){ stopLoopA(); RetoLive.hide(); }
+    if(t.dataset.tab!=='registro'){ stopCam(streamR,'vid-r'); capturing=false; }
+    if(t.dataset.tab==='personas') cargarEmpleados();
+    if(t.dataset.tab==='reportes'){ document.getElementById('st-personas').textContent=empleados.length; cargarRegistrosHoy(); }
+  };
+});
+
+/* ===== Roles ===== */
+function aplicarRol(){
+  document.querySelectorAll('.tab-admin').forEach(t=>t.classList.toggle('hidden', !isAdmin));
+  const pill=document.getElementById('role-pill');
+  pill.textContent = isAdmin ? 'Administrador' : 'Acceso';
+  pill.classList.toggle('admin', isAdmin);
+  document.getElementById('login-card').classList.toggle('hidden', isAdmin);
+  document.getElementById('admin-panel').classList.toggle('hidden', !isAdmin);
+}
+document.getElementById('btn-login').onclick=()=>{
+  const pin=document.getElementById('admin-pin').value.trim();
+  if(pin===claveAdmin){ isAdmin=true; aplicarRol(); document.getElementById('admin-pin').value=''; }
+  else alert('Clave incorrecta');
+};
+document.getElementById('btn-logout').onclick=()=>{ isAdmin=false; aplicarRol(); document.querySelector('.tab[data-tab="asistencia"]').click(); };
+document.getElementById('btn-cambiar-pin').onclick=async()=>{
+  const np=document.getElementById('nuevo-pin').value.trim();
+  if(np.length<4){alert('La clave debe tener al menos 4 caracteres');return;}
+  if(!CFG.url){alert('Configura primero la URL');return;}
+  try{
+    const res=await postAS({action:'cambiarclave',claveActual:claveAdmin,nuevaClave:np});
+    if(res.error){ alert(res.error); return; }
+    claveAdmin=np;
+    document.getElementById('nuevo-pin').value=''; alert('Clave actualizada en la base de datos');
+  }catch(e){ alert('Error al actualizar la clave'); }
+};
+
+/* ===== Modelos / cámara ===== */
+async function loadModels(){
+  if(modelsLoaded) return;
+  await faceapi.nets.tinyFaceDetector.loadFromUri(CFG.modelUrl);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(CFG.modelUrl);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(CFG.modelUrl);
+  modelsLoaded=true;
+}
+async function startCam(id){
+  const v=document.getElementById(id);
+  const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640}},audio:false});
+  v.srcObject=s; await v.play(); return s;
+}
+function stopCam(s,id){ if(s)s.getTracks().forEach(t=>t.stop()); const v=document.getElementById(id); if(v)v.srcObject=null; }
+function setStatus(w,m,t){ const e=document.getElementById('status-'+w); e.textContent=m; e.className='status'+(t?' '+t:''); }
+
+function ear(eye){
+  const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  return (d(eye[1],eye[5])+d(eye[2],eye[4]))/(2*d(eye[0],eye[3]));
+}
+function avgEAR(l){ return (ear(l.getLeftEye())+ear(l.getRightEye()))/2; }
+function yawRatio(l){
+  const le=l.getLeftEye(), re=l.getRightEye(), nose=l.getNose();
+  const eyeMidX=(le[0].x+re[3].x)/2, noseX=nose[3].x;
+  const eyeWidth=Math.abs(re[3].x-le[0].x)||1;
+  return (noseX-eyeMidX)/eyeWidth;
+}
+// Devuelve la pose horizontal detectada (frente, izquierda, derecha).
+function poseDetectada(l){
+  const yaw=yawRatio(l);
+  if(yaw>0.14) return 'izquierda';
+  if(yaw<-0.14) return 'derecha';
+  return 'frente';
+}
+function poseHorizontal(l){ return poseDetectada(l); }
+function capturarMiniatura(video, box){
+  const c=document.createElement('canvas');
+  const size=128; c.width=size; c.height=size;
+  const ctx=c.getContext('2d');
+  // encuadre cuadrado centrado en el rostro, con algo de margen
+  const m=box.width*0.25;
+  const sx=Math.max(0,box.x-m), sy=Math.max(0,box.y-m);
+  const s=Math.min(box.width+m*2, box.height+m*2);
+  ctx.drawImage(video, sx, sy, s, s, 0,0,size,size);
+  return c.toDataURL('image/jpeg',0.7);
+}
+
+/* ===== Datos ===== */
+async function cargarEmpleados(){
+  if(!CFG.url) return;
+  try{
+    const r=await fetch(CFG.url+'?action=empleados');
+    const d=await r.json();
+    empleados=(d.empleados||[]).map(e=>({
+      nombre:e.nombre, cedula:e.cedula, foto:e.foto||'', cargo:e.cargo||'',
+      descriptores:(e.descriptores||[e.descriptor]).filter(Boolean).map(x=>new Float32Array(x))
+    }));
+    buildMatcher(); renderEmpleados();
+  }catch(e){console.error(e);}
+}
+function buildMatcher(){
+  const labeled=empleados.filter(e=>e.descriptores.length)
+    .map(e=>new faceapi.LabeledFaceDescriptors(e.cedula, e.descriptores));
+  faceMatcher = labeled.length ? new faceapi.FaceMatcher(labeled, CFG.thresh) : null;
+}
+function avatarHTML(e){
+  return `<div class="av"><div class="inner">${e.foto?`<img src="${e.foto}">`:(e.nombre[0]||'?').toUpperCase()}</div></div>`;
+}
+function renderEmpleados(){
+  const cnt=document.getElementById('emp-count');
+  const c=document.getElementById('lista-emp'); if(!c) return;
+  // aplicar filtros
+  const q=(document.getElementById('p-buscar')?.value||'').toLowerCase().trim();
+  const cargoF=document.getElementById('p-cargo')?.value||'';
+  let lista=empleados.filter(e=>{
+    const matchTexto = !q || e.nombre.toLowerCase().includes(q) || String(e.cedula).includes(q);
+    const matchCargo = !cargoF || e.cargo===cargoF;
+    return matchTexto && matchCargo;
+  });
+  if(cnt) cnt.textContent=lista.length;
+  if(!empleados.length){c.innerHTML='<p class="hint">Sin personas registradas aún.</p>';return;}
+  if(!lista.length){c.innerHTML='<p class="hint">Ninguna persona coincide con el filtro.</p>';return;}
+  c.innerHTML=lista.map(e=>`
+    <div class="empleado">
+      ${avatarHTML(e)}
+      <div class="info">
+        <div class="nom">${e.nombre}</div>
+        <div class="ced">${e.cedula} · ${e.descriptores.length} áng.</div>
+        ${e.cargo?`<span class="cargo">${e.cargo}</span>`:''}
+      </div>
+      <button class="del" onclick="eliminarEmp('${e.cedula}')">&times;</button>
+    </div>`).join('');
+}
+async function eliminarEmp(ced){
+  if(!confirm('¿Eliminar esta persona?'))return;
+  await postAS({action:'eliminar',cedula:ced});
+  await cargarEmpleados();
+}
+async function postAS(payload){
+  const r=await fetch(CFG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+  return r.json();
+}
+
+/* ===== ASISTENCIA ===== */
+document.getElementById('btn-cam-a').onclick=async()=>{
+  if(!CFG.url){setStatus('a','Configura la URL en Admin','err');return;}
+  try{
+    setStatus('a','Cargando modelos…','warn');
+    await loadModels();
+    if(!empleados.length) await cargarEmpleados();
+    streamA=await startCam('vid-a');
+    if(livenessActivo()) RetoLive.reset(); else RetoLive.hide();
+    setStatus('a','Mira a la cámara','warn');
+    startLoopA();
+    document.getElementById('btn-cam-a').textContent='Cámara activa';
+  }catch(e){setStatus('a','No se pudo acceder a la cámara','err');}
+};
+let escaneando=false;       // evita solapamiento de detecciones
+let lecturas=[];            // promedia descriptores para estabilidad
+function startLoopA(){
+  const v=document.getElementById('vid-a'), cv=document.getElementById('cv-a');
+  stopLoopA();
+  escaneando=true;
+  lecturas=[];
+  bucleA(v,cv);
+}
+function stopLoopA(){ escaneando=false; if(loopA){clearTimeout(loopA);loopA=null;} }
+
+async function bucleA(v,cv){
+  if(!escaneando) return;
+  try{
+    if(!v.paused && !v.ended && modelsLoaded && v.videoWidth){
+      cv.width=v.videoWidth; cv.height=v.videoHeight;
+      const det=await faceapi.detectSingleFace(v,new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.4}))
+        .withFaceLandmarks().withFaceDescriptor();
+      const ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+      if(!det){
+        setStatus('a','Buscando rostro…','warn');
+        lecturas=[];
+      } else {
+        const b=det.detection.box;
+        let liveOK=true;
+        if(livenessActivo()){
+          liveOK = RetoLive.active ? RetoLive.process(det.landmarks) : true;
+        }
+        ctx.strokeStyle=liveOK?'#1f8a5b':'#84b6f4'; ctx.lineWidth=3;
+        ctx.strokeRect(b.x,b.y,b.width,b.height);
+        if(!faceMatcher){
+          setStatus('a','No hay personas registradas','err');
+        } else if(livenessActivo() && !liveOK){
+          /* el cartel del reto guía; seguimos escaneando */
+        } else {
+          // PROMEDIO: acumula 3 descriptores y usa el promedio -> más estable
+          lecturas.push(det.descriptor);
+          if(lecturas.length>3) lecturas.shift();
+          const desc = promediarDescriptores(lecturas);
+          const best=faceMatcher.findBestMatch(desc);
+          if(best.label==='unknown'){
+            setStatus('a','Rostro no reconocido — acércate y mira de frente','warn');
+          } else {
+            await marcar(best.label);
+            lecturas=[];
+          }
+        }
+      }
+    }
+  }catch(err){
+    // NUNCA dejar el bucle muerto: registramos y seguimos
+    console.error('scan error',err);
+  }
+  // reprograma SIEMPRE el siguiente ciclo (aquí está la cura de "se queda pegado")
+  if(escaneando) loopA=setTimeout(()=>bucleA(v,cv), 350);
+}
+
+function promediarDescriptores(arr){
+  if(arr.length===1) return arr[0];
+  const n=arr[0].length, out=new Float32Array(n);
+  for(const d of arr){ for(let i=0;i<n;i++) out[i]+=d[i]; }
+  for(let i=0;i<n;i++) out[i]/=arr.length;
+  return out;
+}
+
+async function marcar(cedula){
+  const now=Date.now();
+  if(lastMark[cedula] && now-lastMark[cedula]<8000) return;
+  lastMark[cedula]=now;
+  const emp=empleados.find(e=>e.cedula===cedula);
+  setStatus('a','Procesando '+emp.nombre+'…','warn');
+  try{
+    const res=await postAS({action:'marcar',cedula,nombre:emp.nombre,cargo:emp.cargo||'',tipo:modoActual});
+    if(res.duplicado){
+      setStatus('a','⚠ '+emp.nombre+': '+res.msg,'err');
+      lastMark[cedula]=Date.now()+12000; // mantener el aviso ~20s sin reintentar
+    } else if(res.ok){
+      setStatus('a','✓ '+emp.nombre+' — '+(res.tipo||modoActual)+' '+res.hora,'ok');
+    } else {
+      setStatus('a','No se pudo registrar','err');
+    }
+    RetoLive.hide(); // ocultar reto al confirmar
+    if(livenessActivo()){ setTimeout(()=>{ if(loopA) RetoLive.reset(); }, 3000); } // re-armar para el siguiente
+  }catch(e){setStatus('a','Error al registrar','err');}
+}
+
+/* ===== Reportes ===== */
+function renderRegistros(items){
+  registrosCache=items;
+  document.getElementById('st-marcas').textContent=items.length;
+  const c=document.getElementById('log-reportes');
+  if(!items.length){c.innerHTML='<p class="hint">Sin registros para este filtro.</p>';return;}
+  c.innerHTML=items.slice().reverse().map(x=>`
+    <div class="log-item">
+      <div><div class="l-nom">${x.nombre}</div><div class="l-fecha">${x.fecha} · ${x.cedula}${x.cargo?' · '+x.cargo:''}</div></div>
+      <span><span class="badge ${x.tipo==='ENTRADA'?'in':'out'}">${x.tipo}</span> ${x.hora}</span>
+    </div>`).join('');
+}
+async function cargarRegistrosHoy(){
+  if(!CFG.url)return;
+  const hoy=new Date().toISOString().slice(0,10);
+  document.getElementById('f-desde').value=hoy;
+  document.getElementById('f-hasta').value=hoy;
+  document.getElementById('f-cedula').value='';
+  document.getElementById('f-nombre').value='';
+  document.getElementById('f-cargo').value='';
+  await aplicarFiltros();
+}
+async function aplicarFiltros(){
+  if(!CFG.url)return;
+  const desde=document.getElementById('f-desde').value;
+  const hasta=document.getElementById('f-hasta').value;
+  const cedula=document.getElementById('f-cedula').value.trim();
+  const nombreF=(document.getElementById('f-nombre').value||'').toLowerCase().trim();
+  const cargoF=document.getElementById('f-cargo').value||'';
+  const c=document.getElementById('log-reportes');
+  c.innerHTML='<div class="loading"><span class="spin"></span>Cargando…</div>';
+  try{
+    let url=CFG.url+'?action=registros';
+    if(desde) url+='&desde='+desde;
+    if(hasta) url+='&hasta='+hasta;
+    if(cedula) url+='&cedula='+encodeURIComponent(cedula);
+    const r=await fetch(url); const d=await r.json();
+    let regs=d.registros||[];
+    if(nombreF) regs=regs.filter(x=>String(x.nombre).toLowerCase().includes(nombreF));
+    if(cargoF) regs=regs.filter(x=>x.cargo===cargoF);
+    renderRegistros(regs);
+  }catch(e){ c.innerHTML='<p class="hint">Error al cargar registros.</p>'; }
+}
+document.getElementById('btn-filtrar').onclick=aplicarFiltros;
+document.getElementById('btn-hoy').onclick=cargarRegistrosHoy;
+document.getElementById('btn-export').onclick=()=>{
+  if(!registrosCache.length){alert('No hay datos para exportar con el filtro actual');return;}
+  const rows=registrosCache.map(x=>({
+    'Fecha':x.fecha, 'Hora':x.hora, 'Tipo de acceso':x.tipo,
+    'Cédula':x.cedula, 'Nombre':x.nombre, 'Cargo':x.cargo||''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:12},{wch:10},{wch:14},{wch:14},{wch:24},{wch:18}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Asistencia');
+  const desde=document.getElementById('f-desde').value||'inicio';
+  const hasta=document.getElementById('f-hasta').value||'fin';
+  XLSX.writeFile(wb,`Asistencia_${desde}_a_${hasta}.xlsx`);
+};
+
+/* ===== REGISTRO ===== */
+document.getElementById('btn-cam-r').onclick=async()=>{
+  if(!CFG.url){setStatus('r','Configura la URL en Admin','err');return;}
+  try{
+    setStatus('r','Cargando modelos…','warn');
+    await loadModels();
+    streamR=await startCam('vid-r');
+    setStatus('r','Cámara lista. Ingresa datos e inicia.','ok');
+    document.getElementById('btn-capturar').disabled=false;
+    document.getElementById('btn-cam-r').textContent='Cámara activa';
+  }catch(e){setStatus('r','No se pudo acceder a la cámara','err');}
+};
+document.getElementById('btn-capturar').onclick=()=>{
+  const nom=document.getElementById('reg-nom').value.trim();
+  const ced=document.getElementById('reg-ced').value.trim();
+  if(!nom||!ced){setStatus('r','Completa nombre y cédula','err');return;}
+  if(capturing) return;
+  capturing=true; capStep=0; capDescriptors=[]; capFoto=null;
+  POSES.forEach((_,i)=>document.getElementById('step-'+i).className='step');
+  document.getElementById('btn-capturar').disabled=true;
+  runCaptureStep(nom,ced);
+};
+function runCaptureStep(nom,ced){
+  const v=document.getElementById('vid-r'), cv=document.getElementById('cv-r');
+  const pose=POSES[capStep];
+  document.getElementById('step-'+capStep).className='step active';
+  const instr={frente:'Mira al FRENTE',izquierda:'Gira a tu IZQUIERDA',derecha:'Gira a tu DERECHA'};
+  setStatus('r',instr[pose]+' y mantén…','warn');
+  let hold=0;
+  const iv=setInterval(async()=>{
+    if(!capturing){clearInterval(iv);return;}
+    cv.width=v.videoWidth; cv.height=v.videoHeight;
+    const det=await faceapi.detectSingleFace(v,new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks().withFaceDescriptor();
+    const ctx=cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+    if(!det){ hold=0; setStatus('r','No se detecta rostro','err'); return; }
+    const b=det.detection.box;
+    ctx.strokeStyle='#4d82bc'; ctx.lineWidth=3; ctx.strokeRect(b.x,b.y,b.width,b.height);
+    const detected=poseHorizontal(det.landmarks);
+    if(detected===pose){
+      hold++; setStatus('r',instr[pose]+' ✓ ('+hold+'/2)','ok');
+      if(pose==='frente' && CFG.foto && !capFoto) capFoto=capturarMiniatura(v,b);
+      if(hold>=2){
+        clearInterval(iv);
+        capDescriptors.push(Array.from(det.descriptor));
+        document.getElementById('step-'+capStep).className='step done';
+        capStep++;
+        if(capStep<POSES.length) runCaptureStep(nom,ced);
+        else finalizarRegistro(nom,ced);
+      }
+    } else { hold=0; setStatus('r',instr[pose]+' (detectado: '+detected+')','warn'); }
+  },500);
+}
+async function finalizarRegistro(nom,ced){
+  setStatus('r','Guardando…','warn');
+  const cargo=document.getElementById('reg-cargo').value;
+  try{
+    const res=await postAS({action:'registrar',nombre:nom,cedula:ced,cargo,descriptores:capDescriptors,foto:capFoto||''});
+    if(res.error) throw new Error(res.error);
+    setStatus('r','✓ '+nom+' registrado ('+capDescriptors.length+' áng.)','ok');
+    document.getElementById('reg-nom').value=''; document.getElementById('reg-ced').value='';
+    await cargarEmpleados();
+  }catch(e){ setStatus('r','Error al guardar: '+e.message,'err'); }
+  capturing=false; document.getElementById('btn-capturar').disabled=false;
+}
+
+/* ===== Admin config ===== */
+document.getElementById('tg-girar').checked=CFG.retoGirar;
+document.getElementById('tg-parpadear').checked=CFG.retoParpadear;
+document.getElementById('tg-foto').checked=CFG.foto;
+document.getElementById('cfg-thresh').value=CFG.thresh;
+document.getElementById('tg-girar').onchange=e=>{ CFG.retoGirar=e.target.checked; localStorage.setItem('ca_girar',CFG.retoGirar?'1':'0'); };
+document.getElementById('tg-parpadear').onchange=e=>{ CFG.retoParpadear=e.target.checked; localStorage.setItem('ca_parpadear',CFG.retoParpadear?'1':'0'); };
+document.getElementById('tg-foto').onchange=e=>{ CFG.foto=e.target.checked; localStorage.setItem('ca_foto',CFG.foto?'1':'0'); };
+document.getElementById('btn-guardar-cfg').onclick=async()=>{
+  CFG.thresh=parseFloat(document.getElementById('cfg-thresh').value)||0.5;
+  localStorage.setItem('ca_thresh',CFG.thresh);
+  buildMatcher(); alert('Configuración guardada'); cargarEmpleados();
+};
+document.getElementById('btn-refresh-emp').onclick=cargarEmpleados;
+document.getElementById('btn-export-emp').onclick=async()=>{
+  try{
+    const r=await fetch(CFG.url+'?action=maestra');
+    const d=await r.json();
+    const lista=d.empleados||[];
+    if(!lista.length){alert('No hay empleados para exportar');return;}
+    const rows=lista.map(e=>({
+      'Cédula':e.cedula,'Nombre':e.nombre,'Cargo':e.cargo,
+      'Ángulos':e.angulos,'Fecha de registro':e.fechaRegistro
+    }));
+    const ws=XLSX.utils.json_to_sheet(rows);
+    ws['!cols']=[{wch:14},{wch:26},{wch:18},{wch:9},{wch:20}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Empleados');
+    const hoy=new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb,'Maestra_Empleados_'+hoy+'.xlsx');
+  }catch(e){ alert('Error al descargar la maestra'); }
+};
+// filtros de personas (en vivo)
+document.getElementById('p-buscar').oninput=renderEmpleados;
+document.getElementById('p-cargo').onchange=renderEmpleados;
+
+// trae la clave admin desde la hoja Config del backend
+async function sincronizarClave(){
+  if(!CFG.url) return;
+  try{
+    const r=await fetch(CFG.url+'?action=config');
+    const d=await r.json();
+    if(d.clave) claveAdmin=String(d.clave);
+  }catch(e){ /* si falla, queda la clave por defecto 1234 */ }
+}
+
+/* ===== Init ===== */
+aplicarRol();
+if(CFG.url.indexOf('/exec')===-1 || CFG.url.indexOf('PEGA_AQUI')!==-1){
+  setStatus('a','⚠ Falta configurar la URL del Web App en el código (URL_FIJA)','err');
+} else {
+  setStatus('a','Pulsa "Encender cámara" para marcar','warn');
+  (async()=>{ await sincronizarClave(); await cargarEmpleados(); })();
+}
+</script>
+</body>
+</html>
